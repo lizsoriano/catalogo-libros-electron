@@ -1,4 +1,9 @@
 const DEFAULT_ENDPOINT = "http://34.51.75.204:5001/books";
+// GET /books no trae imágenes (solo bookId/isbn/title/price/category); las
+// portadas vienen de GET /books/images (mismo microservicio, ruta relativa
+// /uploads/...) y esas rutas las sirve el monolito Node detrás de Nginx en
+// /library, no el propio servicio Flask.
+const IMAGE_BASE_URL = "http://34.51.75.204/library";
 const PAGE_SIZE = 9;
 const storageKey = "catalog.endpoint";
 let books = [];
@@ -34,6 +39,20 @@ function parseBooks(xmlText) {
     stock: textOf(node, "stock", "quantity", "existence"), year: textOf(node, "publicationYear", "year", "publishedYear"),
     image: node.querySelector("images > image > url, image > url, imageUrl, coverUrl")?.textContent?.trim() || ""
   }));
+}
+
+function parseCoverByIsbn(xmlText) {
+  const doc = new DOMParser().parseFromString(xmlText, "application/xml");
+  if (doc.querySelector("parsererror")) throw new Error("El XML de imágenes no es válido.");
+  const map = new Map();
+  for (const node of doc.querySelectorAll("books > book")) {
+    const isbn = textOf(node, "isbn");
+    const imageNodes = [...node.querySelectorAll("images > image")];
+    const cover = imageNodes.find((img) => textOf(img, "isCover") === "true") || imageNodes[0];
+    const url = cover?.querySelector("url")?.textContent?.trim();
+    if (url) map.set(isbn, url);
+  }
+  return map;
 }
 
 function render() {
@@ -82,6 +101,17 @@ async function loadCatalog() {
   elements.status.textContent = "Cargando catálogo XML…";
   try {
     books = parseBooks(await window.catalogApi.loadXml(endpoint));
+    try {
+      const imagesEndpoint = endpoint.replace(/\/books\/?(\?.*)?$/, "/books/images");
+      const coverByIsbn = parseCoverByIsbn(await window.catalogApi.loadXml(imagesEndpoint));
+      for (const book of books) {
+        const relativeUrl = coverByIsbn.get(book.isbn);
+        if (relativeUrl && !book.image) book.image = IMAGE_BASE_URL + relativeUrl;
+      }
+    } catch {
+      // Sin portadas (endpoint de imágenes no disponible): el catálogo se
+      // muestra igual, con el placeholder "Libro" por libro.
+    }
     currentPage = 1; elements.status.textContent = ""; render();
   } catch (error) {
     books = []; elements.grid.replaceChildren(); elements.pagination.replaceChildren();
