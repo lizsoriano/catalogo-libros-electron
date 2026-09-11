@@ -23,8 +23,14 @@ elements.imageBaseUrl.value = localStorage.getItem(imageBaseStorageKey) || DEFAU
 
 function resolveImageUrl(value) {
   if (!value) return "";
+  const base = elements.imageBaseUrl.value.trim().replace(/\/+$/, "");
+  if (!base) return "";
+  // value viene como ruta absoluta (/uploads/...) del XML de /books/images;
+  // new URL(value, base) la resolvería contra el ORIGEN de base (perdiendo
+  // el prefijo /library), por eso se concatena como texto en vez de
+  // resolverla como URL relativa.
   try {
-    return new URL(value, `${elements.imageBaseUrl.value.trim().replace(/\/+$/, "")}/`).toString();
+    return new URL(base + value).toString();
   } catch {
     return "";
   }
