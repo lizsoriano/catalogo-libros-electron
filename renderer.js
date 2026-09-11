@@ -3,20 +3,32 @@ const DEFAULT_ENDPOINT = "http://34.51.75.204:5001/books";
 // portadas vienen de GET /books/images (mismo microservicio, ruta relativa
 // /uploads/...) y esas rutas las sirve el monolito Node detrás de Nginx en
 // /library, no el propio servicio Flask.
-const IMAGE_BASE_URL = "http://34.51.75.204/library";
+const DEFAULT_IMAGE_BASE_URL = "http://34.51.75.204/library";
 const PAGE_SIZE = 9;
 const storageKey = "catalog.endpoint";
+const imageBaseStorageKey = "catalog.image-base-url";
 let books = [];
 let currentPage = 1;
 
 const elements = {
   settings: document.querySelector("#settings"), endpoint: document.querySelector("#endpoint"),
+  imageBaseUrl: document.querySelector("#image-base-url"),
   grid: document.querySelector("#book-grid"), pagination: document.querySelector("#pagination"),
   summary: document.querySelector("#summary"), status: document.querySelector("#status"),
   template: document.querySelector("#book-template")
 };
 
 elements.endpoint.value = localStorage.getItem(storageKey) || DEFAULT_ENDPOINT;
+elements.imageBaseUrl.value = localStorage.getItem(imageBaseStorageKey) || DEFAULT_IMAGE_BASE_URL;
+
+function resolveImageUrl(value) {
+  if (!value) return "";
+  try {
+    return new URL(value, `${elements.imageBaseUrl.value.trim().replace(/\/+$/, "")}/`).toString();
+  } catch {
+    return "";
+  }
+}
 
 function textOf(node, ...names) {
   for (const name of names) {
@@ -106,7 +118,7 @@ async function loadCatalog() {
       const coverByIsbn = parseCoverByIsbn(await window.catalogApi.loadXml(imagesEndpoint));
       for (const book of books) {
         const relativeUrl = coverByIsbn.get(book.isbn);
-        if (relativeUrl && !book.image) book.image = IMAGE_BASE_URL + relativeUrl;
+        if (relativeUrl && !book.image) book.image = resolveImageUrl(relativeUrl);
       }
     } catch {
       // Sin portadas (endpoint de imágenes no disponible): el catálogo se
@@ -125,7 +137,9 @@ document.querySelector("#settings-button").addEventListener("click", (event) => 
   event.currentTarget.setAttribute("aria-expanded", String(!elements.settings.hidden));
 });
 document.querySelector("#save-button").addEventListener("click", () => {
-  localStorage.setItem(storageKey, elements.endpoint.value.trim()); loadCatalog();
+  localStorage.setItem(storageKey, elements.endpoint.value.trim());
+  localStorage.setItem(imageBaseStorageKey, elements.imageBaseUrl.value.trim());
+  loadCatalog();
 });
 document.querySelector("#reload-button").addEventListener("click", loadCatalog);
 loadCatalog();
