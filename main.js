@@ -44,6 +44,28 @@ app.whenReady().then(() => {
     return xml;
   });
 
+  ipcMain.handle("catalog:load-image", async (_event, imageUrl) => {
+    let url;
+    try {
+      url = new URL(imageUrl);
+      if (!/^https?:$/.test(url.protocol)) throw new Error();
+    } catch {
+      throw new Error("La URL de imagen debe usar HTTP o HTTPS.");
+    }
+
+    // Se descarga aquí (proceso principal) en vez de en el <img> del
+    // renderer porque el servidor manda Cross-Origin-Resource-Policy:
+    // same-origin -- Chromium bloquea esa carga cuando el origen de la
+    // página es file://, aunque la URL responda 200 igual que el XML.
+    const response = await net.fetch(url.toString());
+    if (!response.ok) {
+      throw new Error(`El servidor respondió HTTP ${response.status}.`);
+    }
+    const contentType = response.headers.get("content-type") || "image/jpeg";
+    const buffer = Buffer.from(await response.arrayBuffer());
+    return `data:${contentType};base64,${buffer.toString("base64")}`;
+  });
+
   createWindow();
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

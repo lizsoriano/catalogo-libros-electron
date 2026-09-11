@@ -93,10 +93,14 @@ function renderCard(book) {
     fragment.querySelector(`[data-field="${field}"]`).textContent = book[field];
   }
   if (book.image) {
-    fallback.hidden = true;
-    image.src = book.image;
+    image.hidden = true; fallback.hidden = false;
     image.alt = `Portada de ${book.title}`;
-    image.addEventListener("error", () => { image.hidden = true; fallback.hidden = false; });
+    // Se pide por IPC (proceso principal) en vez de asignar book.image
+    // directo a src: el servidor manda Cross-Origin-Resource-Policy:
+    // same-origin y Chromium bloquearía la carga desde este renderer.
+    window.catalogApi.loadImage(book.image)
+      .then((dataUrl) => { image.src = dataUrl; image.hidden = false; fallback.hidden = true; })
+      .catch(() => { image.hidden = true; fallback.hidden = false; });
   } else { image.hidden = true; fallback.hidden = false; }
   return fragment;
 }
