@@ -1,4 +1,4 @@
-const DEFAULT_ENDPOINT = "http://34.51.99.221:5001/books";
+const DEFAULT_ENDPOINT = "http://34.51.75.204:5001/books";
 const PAGE_SIZE = 9;
 const storageKey = "catalog.endpoint";
 let books = [];

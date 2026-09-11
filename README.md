@@ -1,6 +1,6 @@
 # Catálogo de libros para Windows 11
 
-Aplicación Electron que consume exclusivamente el XML de un endpoint de libros. Por defecto usa `http://34.51.99.221:5001/books`; se puede cambiar desde **Configuración** y queda guardado en `localStorage`.
+Aplicación Electron que consume exclusivamente el XML de un endpoint de libros. Por defecto usa `http://34.51.75.204:5001/books`; se puede cambiar desde **Configuración** y queda guardado en `localStorage`.
 
 ## Ejecutar
 
