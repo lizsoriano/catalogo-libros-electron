@@ -93,6 +93,7 @@ function renderCard(book) {
     fragment.querySelector(`[data-field="${field}"]`).textContent = book[field];
   }
   if (book.image) {
+    fallback.hidden = true;
     image.src = book.image;
     image.alt = `Portada de ${book.title}`;
     image.addEventListener("error", () => { image.hidden = true; fallback.hidden = false; });
